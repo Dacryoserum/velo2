@@ -16,16 +16,25 @@ module.exports = createCoreController("api::parking.parking", ({ strapi }) => ({
       return ctx.badRequest("Invalid coordinates");
     }
 
+    console.log("Received coordinates:", {
+      latBottom,
+      latTop,
+      lngBottom,
+      lngTop,
+    });
+
     try {
       const parkings = await strapi.entityService.findMany(
         "api::parking.parking",
         {
           filters: {
-            X: { $gte: parseFloat(latBottom), $lte: parseFloat(latTop) },
-            Y: { $gte: parseFloat(lngBottom), $lte: parseFloat(lngTop) },
+            X: { $gte: parseFloat(lngBottom), $lte: parseFloat(lngTop) },
+            Y: { $gte: parseFloat(latBottom), $lte: parseFloat(latTop) },
           },
         }
       );
+
+      console.log("Filtered parkings:", parkings);
 
       return this.transformResponse(parkings);
     } catch (error) {

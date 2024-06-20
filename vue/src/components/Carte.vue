@@ -1,92 +1,100 @@
 <template>
 	<div id="map" ref="mapElement"></div>
-</template>
-
-<script>
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { toast } from 'vue3-toastify';
-import 'vue3-toastify/dist/index.css';
-import { computed } from 'vue';
-import { useStore } from 'vuex';
-
-const store = useStore();
-const searchData = computed(() => store.getters.getSearchData);
-
-// pour utiliser les données de searchData, searchData.latitude , searchData.longitude , searchData.distance
-
-export default {
-	
-	mounted() {
+  </template>
+  
+  <script>
+  import L from "leaflet";
+  import "leaflet/dist/leaflet.css";
+  import "leaflet.markercluster";
+  import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+  import "leaflet.markercluster/dist/MarkerCluster.css";
+  import { toast } from "vue3-toastify";
+  import "vue3-toastify/dist/index.css";
+  
+  export default {
+		data() {
+		return {
+			map: null,
+			markers: L.markerClusterGroup(), // Initialiser le groupe de clusters
+			localisation : navigator.geolocation.getCurrentPosition(successLocalisation, errorLocalisation);
+		};
+		},
+		
+		mounted() {
 		this.initMap();
-		//this.coordinates = this.fetchCoordinates();
+		this.getCoordinatesEvery3s();
+			
+		}
 	},
 	methods: {
-		initMap() {
-			this.map = L.map("map").setView([49.871150, 2.263945], 12.0);
-			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			}).addTo(this.map);
-						
+	  initMap() {
+		/* [Lat 49.871144, Log 2.2641492] */
+		this.map = L.map("map").setView([this.localisation[0], this.localisation[1]], 12.0);
+		L.tileLayer(
+		  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+		  {}
+		).addTo(this.map);
+  
+		this.map.addLayer(this.markers); // Ajouter le groupe de clusters à la carte
+		this.map.on("moveend", this.fetchCoordinates);
+		console.log("Map initialized and moveend event listener added.");
+	  },
+	  const successLocalisation = (position) => {
+			const latitude  = position.coords.latitude;
+			const longitude = position.coords.longitude;
+			return [longitude, latitude]
 		},
-		fetchCoordinates(fromInterval) {
-			if(this.map.getZoom >= 12) {
-				var bounds = this.map.getBounds();
-				var lat_top = bounds._northEast.lat.toString();
-				var lng_top = bounds._northEast.lng.toString();
-				var lat_bottom = bounds._southWest.lat.toString();
-				var lng_bottom = bounds._southWest.lng.toString();
-			} else {
-				const notify_error_zoom = () => {
-					toast("Increase the zoom level to obtain a result", {
-						"theme": "dark",
-						"type": "error",
-						"autoClose": 2000,
-						"transition": "slide",
-						"dangerouslyHTMLString": true
-					})
-					if (!fromInterval) {
-						notify_error_zoom();
-					}
-					else {
-						console.error("Not enough zoom level to fetch coordinates");
-						return 0 
-					}
-				};
-			}
-			
+		const errorLocalisation = (err) => {
+			return [49.871144, 2.2641492]
+		},
+	  async fetchCoordinates() {
+		const bounds = this.map.getBounds();
+		const latTop = bounds.getNorthEast().lat;
+		const lngTop = bounds.getNorthEast().lng;
+		const latBottom = bounds.getSouthWest().lat;
+		const lngBottom = bounds.getSouthWest().lng;
 
-			const API_URL = `http://localhost:5173/src/api/coordinates?lat_top=${lat_top}&lng_top=${lng_top}&lat_bottom=${lat_bottom}&lng_bottom=${lng_bottom}`;
+		const API_URL = `http://localhost:1337/api/parkings/bounds?latTop=${latTop}&lngTop=${lngTop}&latBottom=${latBottom}&lngBottom=${lngBottom}`;
+  
+		try {
+		  const response = await fetch(API_URL);
+		  const data = await response.json();
+  
+		  console.log("Data received from API:", data);
+  
+		  // Clear existing markers from the cluster group
+		  this.markers.clearLayers();
 		
-			fetch(API_URL)
-				.then(response => response.json())
-				.then(data => {
-					// Assuming the API response is an array of coordinates in the format [latitude, longitude]
-					data.forEach(coord => {
-						const marker = L.marker(coord).addTo(this.map);
-					});
-
-					return 1
-				})
-				.catch(error => {
-					console.error('Error fetching coordinates:', error);
-					return 0
-				});
-		},
-		getCoordinatesEvery3s() {
-			setInterval(() => {
-				//this.coordinates = this.fetchCoordinates(true);
-			}, 3000)
-		}	
+		  data.data = data.data.slice(0, 100);
+		  // Add new markers
+		  if (data.data && data.data.length > 0) {
+			data.data.forEach((parking) => {
+			  const { X, Y } = parking.attributes;
+			  console.log("Adding marker at coordinates:", { X, Y });
+			  const marker = L.marker([Y, X]);
+			  this.markers.addLayer(marker); 
+			});
+		  } else {
+			console.log("No parkings found within bounds.");
+		  }
+		} catch (error) {
+		  console.error("Error fetching coordinates:", error);
+		}
+	  },
+	  getCoordinatesEvery3s() {
+		setInterval(() => {
+		  this.fetchCoordinates();
+		}, 3000);
+		console.log("Set interval to fetch coordinates every 3 seconds.");
+	  },
 	},
-	created () {
-		this.getCoordinatesEvery3s() ; 
-	}
-};
-</script>
-
-<style scoped>
-#map {
-	height: 100% ; 
+  };
+  </script>
+  
+  <style scoped>
+  #map {
+	height: 100%;
 	background-color: #212529;
-}
-</style>
+  }
+  </style>
+  
