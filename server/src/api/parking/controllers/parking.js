@@ -1,9 +1,33 @@
-'use strict';
+const { createCoreController } = require("@strapi/strapi").factories;
 
-/**
- * parking controller
- */
+module.exports = createCoreController("api::parking.parking", ({ strapi }) => ({
+  async findWithinBounds(ctx) {
+    const { latBottom, latTop, lngBottom, lngTop } = ctx.query;
 
-const { createCoreController } = require('@strapi/strapi').factories;
+    // Validation des coordonnées
+    if (
+      isNaN(latBottom) ||
+      isNaN(latTop) ||
+      isNaN(lngBottom) ||
+      isNaN(lngTop)
+    ) {
+      return ctx.badRequest("Invalid coordinates");
+    }
 
-module.exports = createCoreController('api::parking.parking');
+    try {
+      const parkings = await strapi.entityService.findMany(
+        "api::parking.parking",
+        {
+          filters: {
+            X: { $gte: parseFloat(latBottom), $lte: parseFloat(latTop) },
+            Y: { $gte: parseFloat(lngBottom), $lte: parseFloat(lngTop) },
+          },
+        }
+      );
+
+      return this.transformResponse(parkings);
+    } catch (error) {
+      ctx.throw(500, error.message);
+    }
+  },
+}));
