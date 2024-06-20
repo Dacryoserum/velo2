@@ -7,6 +7,13 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';
+import { computed } from 'vue';
+import { useStore } from 'vuex';
+
+const store = useStore();
+const searchData = computed(() => store.getters.getSearchData);
+
+// pour utiliser les données de searchData, searchData.latitude , searchData.longitude , searchData.distance
 
 export default {
 	
