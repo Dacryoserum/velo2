@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useStore } from 'vuex';
+
+const store = useStore();
+
 const villes = [
   { "ville": "Amiens", "coord": { "latitude": 49.895, "longitude": 2.3023 } },
   { "ville": "Paris", "coord": { "latitude": 48.8566, "longitude": 2.3522 } },
@@ -11,6 +16,19 @@ const villes = [
   { "ville": "Strasbourg", "coord": { "latitude": 48.5734, "longitude": 7.7521 } },
   { "ville": "Bordeaux", "coord": { "latitude": 44.8378, "longitude": -0.5792 } }
 ];
+
+const selectedCity = ref('');
+const selectedDistance = ref(15);
+
+const handleSubmit = () => {
+  const city = villes.find(v => v.ville === selectedCity.value);
+  const data = {
+    ville: selectedCity.value,
+    coord: city ? city.coord : null,
+    distance: selectedDistance.value
+  };
+  store.dispatch('submitSearchData', data);
+};
 </script>
 
 <template>
@@ -19,20 +37,22 @@ const villes = [
     <h1 class="search">Recherche</h1>
     <div class="search-inputs d-flex flex-column gap-2">
       <div class="input-group mb-3">
-        <select class="form-control city-combobox" id="cityInput">
+        <select v-model="selectedCity" class="form-control city-combobox" id="cityInput">
           <option value="" disabled selected>Ville</option>
-          <option v-for="ville in villes" :key="ville.code_postal" :value="ville.ville">{{ ville.ville }}</option>
+          <option v-for="ville in villes" :key="ville.coord.latitude" :value="ville.ville">{{ ville.ville }}</option>
         </select>
       </div>
       <div class="slider d-flex align-items-center">
-        <label for="distanceSlider">Distance (km) :</label>
-        <input type="range" min="0" max="30" value="15" class="mx-2 distance-slider" id="distanceSlider" step="1">
-        <span id="distanceValue">15</span>
+        <label for="distanceSlider">Distance :</label>
+        <input v-model="selectedDistance" type="range" min="0" max="30" value="15" class="mx-2 distance-slider" id="distanceSlider" step="1">
+        <span id="distanceValue">{{ selectedDistance }} km</span>
       </div>
-      <p class="count">Tu as <span id="bikeCount">X</span> vélo(s) à proximité.</p>
+      <p class="count">Tu as <span id="bikeCount"> X </span> vélo(s) à proximité.</p>
+      <button @click="handleSubmit" class="btn btn-primary btn-lg btn-block">Rechercher</button>
     </div>
   </div>
 </template>
+
 
 <style scoped>
 .navbar {
@@ -48,12 +68,13 @@ const villes = [
 }
 
 #distanceValue {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .count {
   display: flex;
   justify-content: center;
+  margin-bottom: 1rem;
 }
 
 .nav-item {
@@ -87,6 +108,10 @@ const villes = [
 .search-inputs {
   margin-top: 2rem;
   margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
 #distanceValue {
@@ -103,7 +128,7 @@ const villes = [
 
 .city-combobox {
   width: 100%;
-  max-width: 300px; /* Taille prédéfinie */
+  max-width: 300px;
 }
 
 .slider {
@@ -117,7 +142,7 @@ const villes = [
 
 .distance-slider {
   -webkit-appearance: none;
-  width: 100%;
+  width: 200px;
   height: 8px;
   background: #d3d3d3;
   border-radius: 5px;
@@ -133,5 +158,11 @@ const villes = [
   height: 16px;
   background: #4CAF50;
   border-radius: 50%;
+}
+
+.btn-block {
+  width: 50%;
+  display: flex;
+  justify-content: center;
 }
 </style>
