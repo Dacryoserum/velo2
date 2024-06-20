@@ -1,9 +1,16 @@
-'use strict';
+"use strict";
 
 /**
  * parking service
  */
 
-const { createCoreService } = require('@strapi/strapi').factories;
-
-module.exports = createCoreService('api::parking.parking');
+module.exports = {
+  async findWithinBounds(latBottom, latTop, lngBottom, lngTop) {
+    return strapi.entityService.findMany("api::parking.parking", {
+      filters: {
+        X: { $gte: parseFloat(latBottom), $lte: parseFloat(latTop) },
+        Y: { $gte: parseFloat(lngBottom), $lte: parseFloat(lngTop) },
+      },
+    });
+  },
+};
